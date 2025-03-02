@@ -1,0 +1,86 @@
+{% extends "_includes/base.njk" %} {% block content %}
+<div class="flex gp-2">
+  <div>{% include "_includes/sidebar.njk" %}</div>
+  <div class="flex flex-col">
+    <div class="p-10">
+      <h2 class="text-2xl font-semibold">Billing</h2>
+    </div>
+    <div class="py-2 px-10">
+      {%if subscribed%}
+      <div class="card bg-base-100 w-96 border">
+        <div class="card-body">
+          <h2 class="card-title items-baseline">
+            <span class="text-sm font-base">Active Plan:</span>
+            ${{plan.amount/100}}/{{plan.recurringInterval}}
+          </h2>
+          <p>{{plan.product.name}}</p>
+          <div class="card-actions">
+            <a href="/billing/portal" class="btn btn-primary">Modify</a>
+          </div>
+        </div>
+        {%else%}
+        <a href="/billing/initial" class="link"> Choose a Plan &rarr; </a>
+        {%endif%}
+      </div>
+      <div class="py-2 px-10">
+        <h3 class="font-semibold">Invoices</h3>
+        {%if orders.length == 0%}
+        <div class="py-2">
+          <p class="text-zinc-400">No past invoices...</p>
+        </div>
+        {%endif%} {% for order in orders %}
+        <div class="flex justify-between border-b py-4">
+          <div class="flex flex-col">
+            <div class="font-medium">${{ order.amount/100 }}</div>
+            <div class="text-gray-600 text-xs">{{ order.createdAt.toLocaleString() }}</div>
+          </div>
+          <span class="ml-4">
+            <a class="inline-flex link items-center gap-2" href="{{ order.invoiceURL }}"
+              >View Invoice
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="w-4 h-4"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                class="icon icon-tabler icons-tabler-outline icon-tabler-external-link"
+              >
+                <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                <path d="M12 6h-6a2 2 0 0 0 -2 2v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-6" />
+                <path d="M11 13l9 -9" />
+                <path d="M15 4h5v5" />
+              </svg>
+            </a>
+          </span>
+        </div>
+        {%endfor%}
+        <div class="mt-10">
+          <a href="/billing/portal" class="inline-flex link items-center gap-2"
+            >View all invoices
+
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              class="w-4 h-4"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              class="icon icon-tabler icons-tabler-outline icon-tabler-external-link"
+            >
+              <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+              <path d="M12 6h-6a2 2 0 0 0 -2 2v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-6" />
+              <path d="M11 13l9 -9" />
+              <path d="M15 4h5v5" />
+            </svg>
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endblock %}
+</div>

@@ -1,0 +1,89 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id             String          @id @default(uuid())
+  email          String          @unique
+  password       String
+  createdAt      DateTime        @default(now())
+  profile        Profile?
+  accessTokens   AccessToken[]
+  projectMembers ProjectMember[]
+  timeLogs       TimeLog[]
+  Billing        Billing[]
+}
+
+model Profile {
+  id        String   @id @default(uuid())
+  userId    String   @unique
+  name      String?
+  bio       String?
+  user      User     @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model AccessToken {
+  id        String    @id @default(uuid())
+  token     String    @unique
+  hash      String
+  userId    String
+  user      User      @relation(fields: [userId], references: [id])
+  createdAt DateTime  @default(now())
+  expiresAt DateTime
+  revokedAt DateTime?
+
+  @@index([token])
+}
+
+model Project {
+  id        String          @id @default(uuid())
+  name      String
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+  members   ProjectMember[]
+  timeLogs  TimeLog[]
+}
+
+model ProjectMember {
+  id        String   @id @default(uuid())
+  userId    String
+  projectId String
+  role      String   @default("MEMBER")
+  user      User     @relation(fields: [userId], references: [id])
+  project   Project  @relation(fields: [projectId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, projectId])
+  @@map("Member")
+}
+
+model TimeLog {
+  id          String   @id @default(uuid())
+  description String
+  duration    Int // duration in minutes
+  date        DateTime
+  projectId   String
+  userId      String
+  project     Project  @relation(fields: [projectId], references: [id])
+  user        User     @relation(fields: [userId], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Billing {
+  id         String   @id @default(uuid())
+  externalId String
+  planId     String
+  user       User     @relation(fields: [userId], references: [id])
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  userId     String
+}

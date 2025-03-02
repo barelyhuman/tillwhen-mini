@@ -1,0 +1,8 @@
+node_modules
+
+.env*
+!.env.template
+
+/data
+/src/public/tailwind.css
+/keys

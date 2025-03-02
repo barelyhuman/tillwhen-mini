@@ -1,0 +1,28 @@
+{% extends "_includes/base.njk" %} {% block content %}
+<div class="flex gp-2">
+  <div>{% include "_includes/sidebar.njk" %}</div>
+  <div class="flex flex-col">
+    <div class="p-10">
+      <h2 class="text-2xl font-semibold">Plans</h2>
+      <div class="mt-10 grid grid-cols-3 gap-4">
+        {% for plan in plans %}
+        <div class="plan-card p-6 border rounded-lg max-w-md">
+          <h3 class="text-xl font-bold mb-4">{{plan.nameShort}}</h3>
+          {% for price in plan.prices %}
+          <div class="price-tag text-3xl font-bold mb-4">
+            ${{price.priceAmount/100}}<span class="text-base font-normal"
+              >/{{price.recurringInterval}}</span
+            >
+          </div>
+          <form action="/billing/checkout" method="GET" class="subscription-form">
+            <input type="hidden" name="productId" value="{{price.productId}}" />
+            <button type="submit" class="btn btn-primary w-full">Subscribe Now</button>
+          </form>
+          {% endfor %}
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
