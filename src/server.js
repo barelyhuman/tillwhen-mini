@@ -9,9 +9,10 @@ import { allowLoggedIn, isLoggedIn } from './middlewares/authMiddleware.js'
 import config from './config.js'
 import { CustomerPortal, Checkout } from '@polar-sh/fastify'
 import { billing } from './controllers/billingController.js'
-import { isDev } from './lib/isDev.js'
+import { isDev } from './lib/is-dev.js'
 import Beasties from 'beasties'
 import { readFileSync } from 'node:fs'
+import { prettyMs } from './lib/pretty-ms.js'
 
 const app = Fastify({ logger: true })
 const __dirname = dirname(fileURLToPath(import.meta.url))
@@ -70,8 +71,51 @@ app.get('/signup', (req, reply) => {
   return reply.viewAsync('signup.njk')
 })
 
-app.get('/app', { preHandler: allowLoggedIn }, (r, reply) => {
-  return reply.viewAsync('app.njk')
+app.get('/app', { preHandler: allowLoggedIn }, async (r, reply) => {
+  const currentUser = r.user
+  const logs = (
+    await prisma.timeLog.findMany({
+      where: {
+        userId: currentUser.id,
+      },
+    })
+  ).map(d => {
+    d.durationString = prettyMs(d.duration)
+    return d
+  })
+  return reply.viewAsync('app.njk', {
+    successMessages: reply.flash('success'),
+    logs,
+  })
+})
+
+// TODO: validate input types and string stamps for the form
+app.post('/app', { preHandler: allowLoggedIn }, async (req, reply) => {
+  const { fromDate, fromTime, logTitle, toDate, toTime } = req.body
+
+  const currentUser = req.user
+  const fromDateTime = new Date(fromDate)
+  fromDateTime.setHours(...fromTime.split(':'))
+  const toDateTime = new Date(toDate)
+  toDateTime.setHours(...toTime.split(':'))
+  const diff = toDateTime.getTime() - fromDateTime.getTime()
+
+  await prisma.timeLog.create({
+    data: {
+      title: logTitle,
+      date: fromDateTime,
+      duration: diff,
+      user: {
+        connect: {
+          id: currentUser.id,
+        },
+      },
+    },
+  })
+
+  req.flash('success', 'Time Log Created!')
+
+  return reply.redirect('/app')
 })
 
 app.post(

@@ -1,6 +1,6 @@
 import { Polar } from '@polar-sh/sdk'
 import config from '../config.js'
-import { isDev } from '../lib/isDev.js'
+import { isDev } from '../lib/is-dev.js'
 
 class BillingController {
   constructor() {

@@ -12,21 +12,21 @@ model User {
   email          String          @unique
   password       String
   createdAt      DateTime        @default(now())
-  profile        Profile?
   accessTokens   AccessToken[]
   projectMembers ProjectMember[]
   timeLogs       TimeLog[]
   Billing        Billing[]
+  Profile        Profile[]
 }
 
 model Profile {
   id        String   @id @default(uuid())
-  userId    String   @unique
   name      String?
   bio       String?
-  user      User     @relation(fields: [userId], references: [id])
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id])
 }
 
 model AccessToken {
@@ -67,12 +67,13 @@ model ProjectMember {
 
 model TimeLog {
   id          String   @id @default(uuid())
-  description String
-  duration    Int // duration in minutes
+  title       String
+  description String?
+  duration    Int // duration in milliseconds
   date        DateTime
-  projectId   String
+  projectId   String?
   userId      String
-  project     Project  @relation(fields: [projectId], references: [id])
+  project     Project? @relation(fields: [projectId], references: [id])
   user        User     @relation(fields: [userId], references: [id])
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt

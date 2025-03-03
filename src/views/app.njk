@@ -1,8 +1,28 @@
-{% extends "_includes/base.njk" %} {% block content %}
+{% extends "_includes/base.njk" %} {% block content %} {% if successMessages.length %} {%for msg in
+successMessages%}
+<div class="px-20 ml-auto max-w-sm py-4 flex flex-col gap-10">
+  <div role="alert" class="alert alert-success">
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      class="h-6 w-6 shrink-0 stroke-current"
+      fill="none"
+      viewBox="0 0 24 24"
+    >
+      <path
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+      />
+    </svg>
+    <span>{{msg}}</span>
+  </div>
+</div>
+{%endfor%} {%endif %}
 <div class="flex gap-2">
   <div>{% include "_includes/sidebar.njk" %}</div>
   <div class="p-10">
-    <form>
+    <form action="/app" method="post">
       <div class="flex flex-col gap-6">
         <div class="grid gap-2">
           <label htmlFor="logTitle">Log title</label>
@@ -39,6 +59,21 @@
         </div>
       </div>
     </form>
+
+    <div class="mt-8">
+      <h2 class="text-xl font-semibold mb-4">Time Logs</h2>
+
+      {% for log in logs %}
+      <div class="flex justify-between border-b py-4">
+        <div class="flex flex-col">
+          <div class="font-medium">{{ log.title }}</div>
+          <div class="flex justify-between items-center">
+            <div class="text-gray-600 text-xs">{{ log.durationString }}</div>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
   </div>
 </div>
 {% endblock %}
