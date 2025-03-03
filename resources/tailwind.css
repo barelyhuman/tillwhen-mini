@@ -6,66 +6,6 @@ body {
   @apply font-sans;
 }
 
-.login-container {
-  @apply max-w-md mx-auto my-8 p-8 rounded;
-}
-
-.form-group {
-  @apply mb-4;
-}
-
-.form-control {
-  @apply w-full p-2 mt-1 border border-gray-400 rounded;
-}
-
-.container {
-  @apply p-5 max-w-lg mx-auto;
-}
-
-.control-panel {
-  @apply flex flex-col gap-4;
-}
-
-.input {
-  @apply p-2 text-lg border border-gray-300 rounded;
-}
-
-.button-group {
-  @apply flex gap-2;
-}
-
-.btn {
-  @apply p-2 px-4 border-none rounded bg-black text-white cursor-pointer shadow-inner;
-}
-
-.btn:hover {
-  @apply bg-gray-900;
-}
-
-.sidebar {
-  @apply fixed left-0 top-0 min-h-screen w-52 p-5 overflow-y-auto;
-}
-
-.sidebar-content {
-  @apply flex flex-col gap-2;
-}
-
-.sidebar-item {
-  @apply list-none p-2 rounded transition-colors;
-}
-
-.sidebar-item:hover {
-  @apply bg-gray-200 cursor-pointer;
-}
-
-.sidebar-link {
-  @apply w-full no-underline text-black flex items-center justify-center gap-2;
-}
-
-.sidebar-link .icon {
-  @apply inline-block h-4;
-}
-
 .shadow-btn {
   position: relative;
   padding: 12px 20px;

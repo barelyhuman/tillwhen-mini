@@ -6,3 +6,6 @@ node_modules
 /data
 /src/public/tailwind.css
 /keys
+/dist
+
+.DS_Store

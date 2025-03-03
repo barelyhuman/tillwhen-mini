@@ -19,7 +19,12 @@
           </div>
         </div>
         {%else%}
-        <a href="/billing/initial" class="link"> Choose a Plan &rarr; </a>
+        <div class="card bg-base-100 w-96 border">
+          <div class="card-body">
+            <h3>No Active Subscription</h3>
+            <a href="/billing/initial" class="link"> Choose a Plan &rarr; </a>
+          </div>
+        </div>
         {%endif%}
       </div>
       <div class="py-2 px-10">

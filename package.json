@@ -5,9 +5,10 @@
   "main": "index.js",
   "scripts": {
     "dev": "concurrently \"npm:dev:*\"",
-    "dev:server": "nodemon --env-file=.env src/server.js",
+    "dev:server": "node --env-file=.env build.js -w",
     "dev:tailwind": "npx tailwindcss -i ./resources/tailwind.css -o ./src/public/tailwind.css --watch",
     "build:tailwind": "npx tailwindcss -i ./resources/tailwind.css -o ./src/public/tailwind.css",
+    "build:server": "node build.js",
     "start": "node --env-file=.env src/server.js",
     "fix": "prettier --write ."
   },
@@ -25,6 +26,8 @@
   "devDependencies": {
     "autoprefixer": "^10.4.12",
     "concurrently": "^9.1.2",
+    "esbuild": "^0.25.0",
+    "esbuild-node-externals": "^1.18.0",
     "nodemon": "^3.1.9",
     "postcss": "^8.4.16",
     "prettier": "^3.5.2",
@@ -45,9 +48,13 @@
     "@tailwindcss/typography": "^0.5.16",
     "bcryptjs": "^3.0.2",
     "beasties": "^0.2.0",
+    "chokidar": "^4.0.3",
     "crc": "^4.3.2",
     "daisyui": "^4",
     "fastify": "^5.2.1",
-    "nunjucks": "^3.2.4"
+    "fs-extra": "^11.3.0",
+    "mri": "^1.2.0",
+    "nunjucks": "^3.2.4",
+    "tiny-glob": "^0.2.9"
   }
 }

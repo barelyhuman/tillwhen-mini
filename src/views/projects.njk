@@ -1,0 +1,31 @@
+{% extends "_includes/base.njk" %} {% block content %}
+<div class="flex gap-2">
+  <div>{% include "_includes/sidebar.njk" %}</div>
+  <div class="p-10 w-full">
+    <div class="flex w-full justify-between gap-2 items-center">
+      <h1 class="text-2xl font-bold mb-6">Projects</h1>
+      <div class="mt-6">
+        <a href="/projects/new" class="btn">Create New Project</a>
+      </div>
+    </div>
+
+    {% if projects.length > 0 %}
+    <div class="grid gap-4">
+      {% for project in projects %}
+      <div class="card border p-4">
+        <h2 class="text-xl font-semibold">{{ project.title }}</h2>
+        <p class="text-gray-600">{{ project.description }}</p>
+        <div class="mt-2">
+          <a href="/projects/{{ project.id }}" class="btn btn-sm">View Details</a>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="py-10">
+        <p class="text-gray-600">No projects found.</p>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

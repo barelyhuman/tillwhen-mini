@@ -3,6 +3,7 @@ import nunjucks from 'nunjucks'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
 import prisma from './models/prismaClient.js'
+import bcrypt from 'bcryptjs'
 import authRoutes from './routes/authRoutes.js'
 import { allowLoggedIn, isLoggedIn } from './middlewares/authMiddleware.js'
 import config from './config.js'
@@ -73,8 +74,68 @@ app.get('/app', { preHandler: allowLoggedIn }, (r, reply) => {
   return reply.viewAsync('app.njk')
 })
 
+app.post(
+  '/account/password',
+  { preHandler: allowLoggedIn },
+  async (req, reply) => {
+    const { currentPassword, newPassword, confirmPassword } = req.body
+    const currentUser = req.user
+
+    if (!(await bcrypt.compare(currentPassword, currentUser.password))) {
+      req.flash('error', 'Invalid password')
+      return reply.redirect('/account')
+    }
+
+    if (newPassword === confirmPassword) {
+      req.flash('error', 'Invalid password')
+      return reply.redirect('/account')
+    }
+
+    const hashedPassword = await bcrypt.hash(confirmPassword, 10)
+    await prisma.user.update({
+      data: {
+        password: hashedPassword,
+      },
+      where: {
+        id: currentUser.id,
+      },
+    })
+
+    return reply.redirect('/account')
+  }
+)
+
+app.post(
+  '/account/email',
+  { preHandler: allowLoggedIn },
+  async (req, reply) => {
+    const { email } = req.body
+    const currentUser = req.user
+
+    await prisma.user.update({
+      data: {
+        email: email,
+      },
+      where: {
+        id: currentUser.id,
+      },
+    })
+
+    return reply.redirect('/account')
+  }
+)
+
+app.get('/projects', { preHandler: allowLoggedIn }, (req, reply) => {
+  return reply.viewAsync('projects.njk', {})
+})
+
 app.get('/account', { preHandler: allowLoggedIn }, (r, reply) => {
-  return reply.viewAsync('account.njk')
+  const user = r.user
+  const messages = reply.flash('error')
+  return reply.viewAsync('account.njk', {
+    email: user.email,
+    errorMessages: messages,
+  })
 })
 
 app.get('/billing', { preHandler: allowLoggedIn }, async (r, reply) => {
@@ -92,12 +153,17 @@ app.get('/billing', { preHandler: allowLoggedIn }, async (r, reply) => {
   })
 
   if (customerId) {
-    const _plans = await billing.getUserSubscriptions(customerId.externalId)
+    const [_plans, _orders] = await Promise.all([
+      billing.getUserSubscriptions(customerId.externalId),
+      billing.getInvoices(customerId.externalId),
+    ])
     if (_plans.length) {
-      subscribed = true
-      subscribedPlan = _plans[0]
+      if (!_plans[0].cancelAtPeriodEnd) {
+        subscribed = true
+        subscribedPlan = _plans[0]
+      }
     }
-    orders = await billing.getInvoices(customerId.externalId)
+    orders = _orders
   }
 
   return inlineCSS(
