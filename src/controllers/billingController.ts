@@ -27,7 +27,6 @@ class BillingController {
     const existingCustomer = await this.polarClient.customers.list({
       email: email,
     })
-    console.log({ existingCustomer })
     if (existingCustomer.result.items.length > 0) {
       return existingCustomer.result.items[0]
     }
@@ -39,8 +38,8 @@ class BillingController {
 
   async getUserSubscriptions(customerId: any) {
     const result = await this.polarClient.subscriptions.list({
-      active: true,
       customerId,
+      active: true,
     })
     return result.result.items
   }
@@ -100,14 +99,14 @@ class BillingController {
     }
   }
 
-  async getSubscriptionStatus(subscriptionId: any) {
-    try {
-      const status = await this.polarClient.subscriptions.get(subscriptionId)
-      return status
-    } catch (error) {
-      console.error('Error fetching subscription status:', error)
-      throw error
-    }
+  async getActiveSubscription(customerId: any) {
+    const orders = await this.polarClient.orders.list({
+      customerId: customerId,
+      sorting: ['-created_at'],
+    })
+    return orders.result.items.find(
+      orderItem => orderItem.subscription?.status === 'active'
+    )
   }
 }
 

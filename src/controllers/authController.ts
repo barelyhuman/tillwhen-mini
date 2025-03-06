@@ -27,7 +27,6 @@ export const signup = async (req: any, reply: any) => {
 
 export const login = async (req: any, reply: any) => {
   const { email, password } = req.body
-
   const user = await prisma.user.findUnique({
     where: { email },
   })
@@ -39,10 +38,14 @@ export const login = async (req: any, reply: any) => {
   if (!user.lastLogin) {
     // first time login, create a billing account
     const customer = await billing.createCustomer(user.email)
+    const customerSubscription = await billing.getActiveSubscription(
+      customer.id
+    )
     await prisma.billing.create({
       data: {
         customerId: customer.id,
         userId: user.id,
+        planId: customerSubscription?.productId,
       },
     })
   }

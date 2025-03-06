@@ -194,9 +194,6 @@ app.get(
   { preHandler: allowLoggedIn },
   async (r: any, reply: any) => {
     try {
-      // TODO: check if has an active billing plan and show links to the portal
-      // and avoid   the plan
-
       let subscribed = false
 
       let subscribedPlan = {}
@@ -213,12 +210,12 @@ app.get(
           billing.getUserSubscriptions(billingInfo.customerId),
           billing.getInvoices(billingInfo.customerId),
         ])
+
         if (_plans.length) {
-          if (!_plans[0].cancelAtPeriodEnd) {
-            subscribed = true
-            subscribedPlan = _plans[0]
-          }
+          subscribed = true
+          subscribedPlan = _plans[0]
         }
+
         orders = _orders
       }
 
