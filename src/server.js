@@ -3,6 +3,7 @@ import nunjucks from 'nunjucks'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
 import prisma from './models/prismaClient.js'
+import { Webhooks } from '@polar-sh/fastify'
 import bcrypt from 'bcryptjs'
 import authRoutes from './routes/authRoutes.js'
 import { allowLoggedIn, isLoggedIn } from './middlewares/authMiddleware.js'
@@ -183,41 +184,62 @@ app.get('/account', { preHandler: allowLoggedIn }, (r, reply) => {
 })
 
 app.get('/billing', { preHandler: allowLoggedIn }, async (r, reply) => {
-  // TODO: check if has an active billing plan and show links to the portal
-  // and avoid showing the plan
+  try {
+    // TODO: check if has an active billing plan and show links to the portal
+    // and avoid   the plan
 
-  let subscribed = false
+    let subscribed = false
 
-  let subscribedPlan = {}
-  let orders = []
-  const customerId = await prisma.billing.findFirst({
-    where: {
-      userId: r.user.id,
-    },
-  })
-
-  if (customerId) {
-    const [_plans, _orders] = await Promise.all([
-      billing.getUserSubscriptions(customerId.externalId),
-      billing.getInvoices(customerId.externalId),
-    ])
-    if (_plans.length) {
-      if (!_plans[0].cancelAtPeriodEnd) {
-        subscribed = true
-        subscribedPlan = _plans[0]
-      }
-    }
-    orders = _orders
-  }
-
-  return inlineCSS(
-    await reply.viewAsync('billing.njk', {
-      subscribed,
-      orders,
-      plan: subscribedPlan,
+    let subscribedPlan = {}
+    let orders = []
+    const customerId = await prisma.billing.findFirst({
+      where: {
+        userId: r.user.id,
+        isActive: true,
+      },
     })
-  )
+
+    if (customerId) {
+      const [_plans, _orders] = await Promise.all([
+        billing.getUserSubscriptions(customerId.externalId),
+        billing.getInvoices(customerId.externalId),
+      ])
+      if (_plans.length) {
+        if (!_plans[0].cancelAtPeriodEnd) {
+          subscribed = true
+          subscribedPlan = _plans[0]
+        }
+      }
+      orders = _orders
+    }
+
+    return inlineCSS(
+      await reply.viewAsync('billing.njk', {
+        subscribed,
+        orders,
+        plan: subscribedPlan,
+      })
+    )
+  } catch (err) {
+    console.error(err)
+  }
 })
+
+app.get(
+  '/billing/cancel',
+  { preHandler: allowLoggedIn },
+  async (r, reply) => {}
+)
+
+// app.post(
+//   '/polar/webhooks',
+//   Webhooks({
+//     webhookSecret: config.POLAR_WEBHOOK_SECRET,
+//     onCheckoutCreated: async payload => {
+//       payload.data.customerId
+//     },
+//   })
+// )
 
 app.get('/billing/initial', { preHandler: allowLoggedIn }, async (r, reply) => {
   const plans = await billing.getPaymentPlans()
@@ -245,11 +267,22 @@ app.get(
     const customerId = await billing.getCustomerId(checkoutId)
     const planId = await billing.getPlanId(checkoutId)
     const user = req.user
+
+    await prisma.billing.updateMany({
+      where: {
+        userId: user.id,
+      },
+      data: {
+        isActive: false,
+      },
+    })
+
     await prisma.billing.create({
       data: {
         planId,
         externalId: customerId,
         userId: user.id,
+        isActive: true,
       },
     })
     return reply.redirect('/billing')

@@ -1,6 +1,7 @@
 import { generateToken } from '../lib/access-token.js'
 import prisma from '../models/prismaClient.js'
 import bcrypt from 'bcryptjs'
+import { billing } from './billingController.js'
 
 export const signup = async (req, reply) => {
   const { email, password, name, bio } = req.body
@@ -34,6 +35,17 @@ export const login = async (req, reply) => {
     return reply.code(401).send({ error: 'Invalid email or password' })
   }
 
+  if (!user.lastLogin) {
+    // first time login, create a billing account
+    const customer = await billing.createCustomer(user.email)
+    await prisma.billing.create({
+      data: {
+        customerId: customer.id,
+        userId: user.id,
+      },
+    })
+  }
+
   const { token, hash } = generateToken()
   await prisma.accessToken.create({
     data: {
@@ -57,4 +69,11 @@ export const login = async (req, reply) => {
   } else {
     reply.redirect('/login')
   }
+
+  await prisma.user.update({
+    where: { email },
+    data: {
+      lastLogin: new Date(),
+    },
+  })
 }

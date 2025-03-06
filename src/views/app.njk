@@ -23,7 +23,7 @@ successMessages%}
   <div>{% include "_includes/sidebar.njk" %}</div>
   <div class="p-10">
     <form action="/app" method="post">
-      <div class="flex flex-col gap-6">
+      <div class="flex items-end gap-6">
         <div class="grid gap-2">
           <label htmlFor="logTitle">Log title</label>
           <input
@@ -54,9 +54,9 @@ successMessages%}
             <input type="time" name="toTime" class="input input-bordered" />
           </div>
         </div>
-        <div class="button-group">
-          <button class="btn">Create Log</button>
-        </div>
+          <div>
+            <button class="btn">Create Log</button>
+          </div>
       </div>
     </form>
 

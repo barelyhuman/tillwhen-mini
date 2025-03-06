@@ -16,6 +16,20 @@ class BillingController {
     })
   }
 
+  async createCustomer(email) {
+    const existingCustomer = await this.polarClient.customers.list({
+      email: email,
+    })
+    console.log({ existingCustomer })
+    if (existingCustomer.result.items.length > 0) {
+      return existingCustomer.result.items[0]
+    }
+    const customer = await this.polarClient.customers.create({
+      email: email,
+    })
+    return customer
+  }
+
   async getUserSubscriptions(customerId) {
     const result = await this.polarClient.subscriptions.list({
       active: true,
