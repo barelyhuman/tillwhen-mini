@@ -7,6 +7,7 @@
     "dev": "concurrently \"npm:dev:*\"",
     "dev:server": "node --env-file=.env build.js -w",
     "dev:tailwind": "npx tailwindcss -i ./resources/tailwind.css -o ./src/public/tailwind.css --watch",
+    "build": "pnpm build:tailwind && pnpm build:server",
     "build:tailwind": "npx tailwindcss -i ./resources/tailwind.css -o ./src/public/tailwind.css",
     "build:server": "node build.js",
     "start": "node --env-file=.env src/server.js",
@@ -25,6 +26,7 @@
   "packageManager": "pnpm@10.5.2+sha512.da9dc28cd3ff40d0592188235ab25d3202add8a207afbedc682220e4a0029ffbff4562102b9e6e46b4e3f9e8bd53e6d05de48544b0c57d4b0179e22c76d1199b",
   "devDependencies": {
     "@types/node": "20",
+    "@types/nunjucks": "^3.2.6",
     "autoprefixer": "^10.4.12",
     "concurrently": "^9.1.2",
     "esbuild": "^0.25.0",

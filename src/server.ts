@@ -1,5 +1,4 @@
 import Fastify from 'fastify'
-// @ts-expect-error TS(7016): Could not find a declaration file for module 'nunj... Remove this comment to see the full error message
 import nunjucks from 'nunjucks'
 
 import { CustomerPortal } from '@polar-sh/fastify'
@@ -176,9 +175,9 @@ app.post(
   }
 )
 
-app.get('/projects', { preHandler: allowLoggedIn }, (req: any, reply: any) => {
-  return reply.viewAsync('projects.njk', {})
-})
+// app.get('/projects', { preHandler: allowLoggedIn }, (req: any, reply: any) => {
+//   return reply.viewAsync('projects.njk', {})
+// })
 
 app.get('/account', { preHandler: allowLoggedIn }, (r: any, reply: any) => {
   const user = r.user
