@@ -34,7 +34,7 @@ importers:
         version: 0.28.0(zod@3.24.2)
       '@prisma/client':
         specifier: 6.4.1
-        version: 6.4.1(prisma@6.4.1)
+        version: 6.4.1(prisma@6.4.1(typescript@5.8.2))(typescript@5.8.2)
       '@tailwindcss/forms':
         specifier: ^0.5.10
         version: 0.5.10(tailwindcss@3.4.17)
@@ -72,6 +72,9 @@ importers:
         specifier: ^0.2.9
         version: 0.2.9
     devDependencies:
+      '@types/node':
+        specifier: '20'
+        version: 20.17.23
       autoprefixer:
         specifier: ^10.4.12
         version: 10.4.20(postcss@8.5.3)
@@ -95,10 +98,13 @@ importers:
         version: 3.5.2
       prisma:
         specifier: ^6.4.1
-        version: 6.4.1
+        version: 6.4.1(typescript@5.8.2)
       tailwindcss:
         specifier: ^3.3.2
         version: 3.4.17
+      typescript:
+        specifier: 5.8.2
+        version: 5.8.2
 
 packages:
 
@@ -404,6 +410,9 @@ packages:
     resolution: {integrity: sha512-0wDLwCVF5V3x3b1SGXPCDcdsbDHMBe+lkFzBRaHeLvNi+nrrnZ1lA18u+OTWO8iSWU2GxUOCvlXtDuqftc1oiA==, tarball: https://registry.npmjs.org/@tailwindcss/typography/-/typography-0.5.16.tgz}
     peerDependencies:
       tailwindcss: '>=3.0.0 || insiders || >=4.0.0-alpha.20 || >=4.0.0-beta.1'
+
+  '@types/node@20.17.23':
+    resolution: {integrity: sha512-8PCGZ1ZJbEZuYNTMqywO+Sj4vSKjSjT6Ua+6RFOYlEvIvKQABPtrNkoVSLSKDb4obYcMhspVKmsw8Cm10NFRUg==, tarball: https://registry.npmjs.org/@types/node/-/node-20.17.23.tgz}
 
   a-sync-waterfall@1.0.1:
     resolution: {integrity: sha512-RYTOHHdWipFUliRFMCS4X2Yn2X8M87V/OpSqWzKKOGhzqyUxzyVmhHDH9sAvG+ZuQf/TAOFsLCpMw09I1ufUnA==, tarball: https://registry.npmjs.org/a-sync-waterfall/-/a-sync-waterfall-1.0.1.tgz}
@@ -1313,8 +1322,16 @@ packages:
   tslib@2.8.1:
     resolution: {integrity: sha512-oJFu94HQb+KVduSUQL7wnpmqnfmLsOA/nAh6b6EH0wCEoK0/mPeXU6c3wKDV83MkOuHPRHtSXKKU99IBazS/2w==, tarball: https://registry.npmjs.org/tslib/-/tslib-2.8.1.tgz}
 
+  typescript@5.8.2:
+    resolution: {integrity: sha512-aJn6wq13/afZp/jT9QZmwEjDqqvSGp1VT5GVg+f/t6/oVyrgXM6BY1h9BRh/O5p3PlUPAe+WuiEZOmb/49RqoQ==, tarball: https://registry.npmjs.org/typescript/-/typescript-5.8.2.tgz}
+    engines: {node: '>=14.17'}
+    hasBin: true
+
   undefsafe@2.0.5:
     resolution: {integrity: sha512-WxONCrssBM8TSPRqN5EmsjVrsv4A8X12J4ArBiiayv3DyyG3ZlIg6yysuuSYdZsVz3TKcTg2fd//Ujd4CHV1iA==, tarball: https://registry.npmjs.org/undefsafe/-/undefsafe-2.0.5.tgz}
+
+  undici-types@6.19.8:
+    resolution: {integrity: sha512-ve2KP6f/JnbPBFyobGHuerC9g1FYGn/F8n1LWTwNxCEzd6IfqTwUQcNXgEtmmQ6DlRrC1hrSrBnCZPokRrDHjw==, tarball: https://registry.npmjs.org/undici-types/-/undici-types-6.19.8.tgz}
 
   universalify@2.0.1:
     resolution: {integrity: sha512-gptHNQghINnc/vTGIk0SOFGFNXw7JVrlRUtConJRlvaw6DuX0wO5Jeko9sWrMBhh+PsYAZ7oXAiOnf/UKogyiw==, tarball: https://registry.npmjs.org/universalify/-/universalify-2.0.1.tgz}
@@ -1579,9 +1596,10 @@ snapshots:
       standardwebhooks: 1.0.0
       zod: 3.24.2
 
-  '@prisma/client@6.4.1(prisma@6.4.1)':
+  '@prisma/client@6.4.1(prisma@6.4.1(typescript@5.8.2))(typescript@5.8.2)':
     optionalDependencies:
-      prisma: 6.4.1
+      prisma: 6.4.1(typescript@5.8.2)
+      typescript: 5.8.2
 
   '@prisma/debug@6.4.1': {}
 
@@ -1618,6 +1636,10 @@ snapshots:
       lodash.merge: 4.6.2
       postcss-selector-parser: 6.0.10
       tailwindcss: 3.4.17
+
+  '@types/node@20.17.23':
+    dependencies:
+      undici-types: 6.19.8
 
   a-sync-waterfall@1.0.1: {}
 
@@ -2314,13 +2336,14 @@ snapshots:
 
   prettier@3.5.2: {}
 
-  prisma@6.4.1:
+  prisma@6.4.1(typescript@5.8.2):
     dependencies:
       '@prisma/engines': 6.4.1
       esbuild: 0.25.0
       esbuild-register: 3.6.0(esbuild@0.25.0)
     optionalDependencies:
       fsevents: 2.3.3
+      typescript: 5.8.2
     transitivePeerDependencies:
       - supports-color
 
@@ -2526,7 +2549,11 @@ snapshots:
 
   tslib@2.8.1: {}
 
+  typescript@5.8.2: {}
+
   undefsafe@2.0.5: {}
+
+  undici-types@6.19.8: {}
 
   universalify@2.0.1: {}
 

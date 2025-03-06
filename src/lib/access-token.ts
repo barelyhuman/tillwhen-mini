@@ -1,5 +1,5 @@
 import crc32 from 'crc/crc32'
-import crypto from 'crypto'
+import crypto from 'node:crypto'
 
 export function generateToken(length = 32) {
   const randomBytes = crypto.randomBytes(length)
@@ -14,7 +14,7 @@ export function generateToken(length = 32) {
   }
 }
 
-export function verifyToken(token, storedHash) {
+export function verifyToken(token: any, storedHash: any) {
   const computedHash = crypto.createHash('sha256').update(token).digest('hex')
   return computedHash === storedHash
 }

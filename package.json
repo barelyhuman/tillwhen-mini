@@ -22,8 +22,9 @@
   },
   "keywords": [],
   "author": "",
-  "packageManager": "pnpm@10.5.2",
+  "packageManager": "pnpm@10.5.2+sha512.da9dc28cd3ff40d0592188235ab25d3202add8a207afbedc682220e4a0029ffbff4562102b9e6e46b4e3f9e8bd53e6d05de48544b0c57d4b0179e22c76d1199b",
   "devDependencies": {
+    "@types/node": "20",
     "autoprefixer": "^10.4.12",
     "concurrently": "^9.1.2",
     "esbuild": "^0.25.0",
@@ -32,7 +33,8 @@
     "postcss": "^8.4.16",
     "prettier": "^3.5.2",
     "prisma": "^6.4.1",
-    "tailwindcss": "^3.3.2"
+    "tailwindcss": "^3.3.2",
+    "typescript": "5.8.2"
   },
   "dependencies": {
     "@fastify/cookie": "^11.0.2",

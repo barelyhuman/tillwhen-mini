@@ -12,11 +12,12 @@ model User {
   email          String          @unique
   password       String
   createdAt      DateTime        @default(now())
+  lastLogin      DateTime?
   accessTokens   AccessToken[]
   projectMembers ProjectMember[]
   timeLogs       TimeLog[]
-  Billing        Billing[]
-  Profile        Profile[]
+  profile        Profile?
+  billing        Billing?
 }
 
 model Profile {
@@ -81,10 +82,11 @@ model TimeLog {
 
 model Billing {
   id         String   @id @default(uuid())
-  externalId String
-  planId     String
-  user       User     @relation(fields: [userId], references: [id])
+  customerId String
+  planId     String?
+  userId     String   @unique
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
-  userId     String
+  isActive   Boolean  @default(true)
+  user       User     @relation(fields: [userId], references: [id])
 }

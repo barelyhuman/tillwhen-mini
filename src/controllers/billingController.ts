@@ -1,8 +1,10 @@
 import { Polar } from '@polar-sh/sdk'
 import config from '../config.js'
 import { isDev } from '../lib/is-dev.js'
+import prisma from '../models/prismaClient.js'
 
 class BillingController {
+  polarClient: Polar
   constructor() {
     this.polarClient = new Polar({
       accessToken: config.BILLING_API_KEY,
@@ -16,7 +18,12 @@ class BillingController {
     })
   }
 
-  async createCustomer(email) {
+  async getPaymentPlanIds() {
+    const plans = await this.getPaymentPlans()
+    return plans.result.items.map(d => d.id)
+  }
+
+  async createCustomer(email: any) {
     const existingCustomer = await this.polarClient.customers.list({
       email: email,
     })
@@ -30,7 +37,7 @@ class BillingController {
     return customer
   }
 
-  async getUserSubscriptions(customerId) {
+  async getUserSubscriptions(customerId: any) {
     const result = await this.polarClient.subscriptions.list({
       active: true,
       customerId,
@@ -38,34 +45,27 @@ class BillingController {
     return result.result.items
   }
 
-  async createSubscription(userId, planId) {
-    try {
-      const subscription = await this.polarClient.subscriptions.create({
-        userId,
-        planId,
-      })
-      return subscription
-    } catch (error) {
-      console.error('Error creating subscription:', error)
-      throw error
-    }
+  async createCheckout(userId: string) {
+    const userAndBilling = await prisma.user.findFirst({
+      where: {
+        id: userId,
+      },
+      include: {
+        billing: true,
+      },
+    })
+
+    const billing = userAndBilling?.billing!
+
+    const checkoutSesssion = await this.polarClient.checkouts.create({
+      customerId: billing.customerId,
+      products: await this.getPaymentPlanIds(),
+    })
+
+    return checkoutSesssion
   }
 
-  async processPayment(amount, currency, paymentMethodId) {
-    try {
-      const payment = await this.polarClient.payments.create({
-        amount,
-        currency,
-        paymentMethodId,
-      })
-      return payment
-    } catch (error) {
-      console.error('Error processing payment:', error)
-      throw error
-    }
-  }
-
-  async getPlanId(checkoutId) {
+  async getPlanId(checkoutId: any) {
     try {
       const result = await this.polarClient.checkouts.get({ id: checkoutId })
       return result.productId
@@ -75,12 +75,12 @@ class BillingController {
     }
   }
 
-  async getInvoices(customerId) {
+  async getInvoices(customerId: any) {
     const orders = await this.polarClient.orders.list({
       customerId: customerId,
     })
     return Promise.all(
-      orders.result.items.map(async order => {
+      orders.result.items.map(async (order: any) => {
         const response = await this.polarClient.orders.invoice({
           id: order.id,
         })
@@ -90,17 +90,17 @@ class BillingController {
     )
   }
 
-  async getCustomerId(checkoutId) {
+  async getCustomerId(checkoutId: any) {
     try {
       const result = await this.polarClient.checkouts.get({ id: checkoutId })
-      return result.customerId
+      return result.customerId!
     } catch (err) {
       console.error('failed to get customer id')
       throw err
     }
   }
 
-  async getSubscriptionStatus(subscriptionId) {
+  async getSubscriptionStatus(subscriptionId: any) {
     try {
       const status = await this.polarClient.subscriptions.get(subscriptionId)
       return status

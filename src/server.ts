@@ -1,19 +1,21 @@
 import Fastify from 'fastify'
+// @ts-expect-error TS(7016): Could not find a declaration file for module 'nunj... Remove this comment to see the full error message
 import nunjucks from 'nunjucks'
-import { fileURLToPath } from 'node:url'
-import { dirname, join } from 'node:path'
-import prisma from './models/prismaClient.js'
-import { Webhooks } from '@polar-sh/fastify'
+
+import { CustomerPortal } from '@polar-sh/fastify'
 import bcrypt from 'bcryptjs'
-import authRoutes from './routes/authRoutes.js'
-import { allowLoggedIn, isLoggedIn } from './middlewares/authMiddleware.js'
-import config from './config.js'
-import { CustomerPortal, Checkout } from '@polar-sh/fastify'
-import { billing } from './controllers/billingController.js'
-import { isDev } from './lib/is-dev.js'
-import Beasties from 'beasties'
 import { readFileSync } from 'node:fs'
-import { prettyMs } from './lib/pretty-ms.js'
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
+import config from './config.ts'
+import { billing } from './controllers/billingController.ts'
+import { constructDateFromSplits } from './lib/date.ts'
+import { inlineCSS } from './lib/inlineCSS.ts'
+import { isDev } from './lib/is-dev.ts'
+import { prettyMs } from './lib/pretty-ms.ts'
+import { allowLoggedIn, isLoggedIn } from './middlewares/authMiddleware.ts'
+import prisma from './models/prismaClient.ts'
+import authRoutes from './routes/authRoutes.ts'
 
 const app = Fastify({ logger: true })
 const __dirname = dirname(fileURLToPath(import.meta.url))
@@ -39,6 +41,7 @@ app.register(import('@fastify/secure-session'), {
   key: readFileSync(join(__dirname, '../keys', 'secret-key')),
 })
 
+// @ts-expect-error overload for flash types missing
 app.register(import('@fastify/flash'), {
   root: join(__dirname, './public'),
   prefix: '/public/',
@@ -51,28 +54,28 @@ app.register(import('@fastify/view'), {
   templates: './src/views',
 })
 
-app.decorateRequest('isLoggedIn', function () {
+app.decorateRequest('isLoggedIn', function (this: any) {
   return isLoggedIn(this)
 })
 
-const PORT = config.PORT || 8000
+const PORT = config.PORT
 
-app.get('/', (req, reply) => {
+app.get('/', (req: any, reply: any) => {
   return reply.viewAsync('index.njk')
 })
 
-app.get('/login', async (req, reply) => {
+app.get('/login', async (req: any, reply: any) => {
   if (await req.isLoggedIn()) {
     return reply.redirect('/app')
   }
   return reply.viewAsync('login.njk')
 })
 
-app.get('/signup', (req, reply) => {
+app.get('/signup', (req: any, reply: any) => {
   return reply.viewAsync('signup.njk')
 })
 
-app.get('/app', { preHandler: allowLoggedIn }, async (r, reply) => {
+app.get('/app', { preHandler: allowLoggedIn }, async (r: any, reply: any) => {
   const currentUser = r.user
   const logs = (
     await prisma.timeLog.findMany({
@@ -80,7 +83,7 @@ app.get('/app', { preHandler: allowLoggedIn }, async (r, reply) => {
         userId: currentUser.id,
       },
     })
-  ).map(d => {
+  ).map((d: any) => {
     d.durationString = prettyMs(d.duration)
     return d
   })
@@ -91,38 +94,41 @@ app.get('/app', { preHandler: allowLoggedIn }, async (r, reply) => {
 })
 
 // TODO: validate input types and string stamps for the form
-app.post('/app', { preHandler: allowLoggedIn }, async (req, reply) => {
-  const { fromDate, fromTime, logTitle, toDate, toTime } = req.body
+app.post(
+  '/app',
+  { preHandler: allowLoggedIn },
+  async (req: any, reply: any) => {
+    const { fromDate, fromTime, logTitle, toDate, toTime } = req.body
 
-  const currentUser = req.user
-  const fromDateTime = new Date(fromDate)
-  fromDateTime.setHours(...fromTime.split(':'))
-  const toDateTime = new Date(toDate)
-  toDateTime.setHours(...toTime.split(':'))
-  const diff = toDateTime.getTime() - fromDateTime.getTime()
+    const currentUser = req.user
+    const fromDateTime = constructDateFromSplits(fromDate, fromTime)
+    const toDateTime = constructDateFromSplits(toDate, toTime)
 
-  await prisma.timeLog.create({
-    data: {
-      title: logTitle,
-      date: fromDateTime,
-      duration: diff,
-      user: {
-        connect: {
-          id: currentUser.id,
+    const diff = toDateTime.getTime() - fromDateTime.getTime()
+
+    await prisma.timeLog.create({
+      data: {
+        title: logTitle,
+        date: fromDateTime,
+        duration: diff,
+        user: {
+          connect: {
+            id: currentUser.id,
+          },
         },
       },
-    },
-  })
+    })
 
-  req.flash('success', 'Time Log Created!')
+    req.flash('success', 'Time Log Created!')
 
-  return reply.redirect('/app')
-})
+    return reply.redirect('/app')
+  }
+)
 
 app.post(
   '/account/password',
   { preHandler: allowLoggedIn },
-  async (req, reply) => {
+  async (req: any, reply: any) => {
     const { currentPassword, newPassword, confirmPassword } = req.body
     const currentUser = req.user
 
@@ -153,7 +159,7 @@ app.post(
 app.post(
   '/account/email',
   { preHandler: allowLoggedIn },
-  async (req, reply) => {
+  async (req: any, reply: any) => {
     const { email } = req.body
     const currentUser = req.user
 
@@ -170,11 +176,11 @@ app.post(
   }
 )
 
-app.get('/projects', { preHandler: allowLoggedIn }, (req, reply) => {
+app.get('/projects', { preHandler: allowLoggedIn }, (req: any, reply: any) => {
   return reply.viewAsync('projects.njk', {})
 })
 
-app.get('/account', { preHandler: allowLoggedIn }, (r, reply) => {
+app.get('/account', { preHandler: allowLoggedIn }, (r: any, reply: any) => {
   const user = r.user
   const messages = reply.flash('error')
   return reply.viewAsync('account.njk', {
@@ -183,52 +189,56 @@ app.get('/account', { preHandler: allowLoggedIn }, (r, reply) => {
   })
 })
 
-app.get('/billing', { preHandler: allowLoggedIn }, async (r, reply) => {
-  try {
-    // TODO: check if has an active billing plan and show links to the portal
-    // and avoid   the plan
+app.get(
+  '/billing',
+  { preHandler: allowLoggedIn },
+  async (r: any, reply: any) => {
+    try {
+      // TODO: check if has an active billing plan and show links to the portal
+      // and avoid   the plan
 
-    let subscribed = false
+      let subscribed = false
 
-    let subscribedPlan = {}
-    let orders = []
-    const customerId = await prisma.billing.findFirst({
-      where: {
-        userId: r.user.id,
-        isActive: true,
-      },
-    })
-
-    if (customerId) {
-      const [_plans, _orders] = await Promise.all([
-        billing.getUserSubscriptions(customerId.externalId),
-        billing.getInvoices(customerId.externalId),
-      ])
-      if (_plans.length) {
-        if (!_plans[0].cancelAtPeriodEnd) {
-          subscribed = true
-          subscribedPlan = _plans[0]
-        }
-      }
-      orders = _orders
-    }
-
-    return inlineCSS(
-      await reply.viewAsync('billing.njk', {
-        subscribed,
-        orders,
-        plan: subscribedPlan,
+      let subscribedPlan = {}
+      let orders = []
+      const billingInfo = await prisma.billing.findFirst({
+        where: {
+          userId: r.user.id,
+          isActive: true,
+        },
       })
-    )
-  } catch (err) {
-    console.error(err)
+
+      if (billingInfo) {
+        const [_plans, _orders] = await Promise.all([
+          billing.getUserSubscriptions(billingInfo.customerId),
+          billing.getInvoices(billingInfo.customerId),
+        ])
+        if (_plans.length) {
+          if (!_plans[0].cancelAtPeriodEnd) {
+            subscribed = true
+            subscribedPlan = _plans[0]
+          }
+        }
+        orders = _orders
+      }
+
+      return inlineCSS(
+        await reply.viewAsync('billing.njk', {
+          subscribed,
+          orders,
+          plan: subscribedPlan,
+        })
+      )
+    } catch (err) {
+      console.error(err)
+    }
   }
-})
+)
 
 app.get(
   '/billing/cancel',
   { preHandler: allowLoggedIn },
-  async (r, reply) => {}
+  async (r: any, reply: any) => {}
 )
 
 // app.post(
@@ -241,20 +251,24 @@ app.get(
 //   })
 // )
 
-app.get('/billing/initial', { preHandler: allowLoggedIn }, async (r, reply) => {
-  const plans = await billing.getPaymentPlans()
+app.get(
+  '/billing/initial',
+  { preHandler: allowLoggedIn },
+  async (r: any, reply: any) => {
+    const plans = await billing.getPaymentPlans()
 
-  return inlineCSS(
-    await reply.viewAsync('billing-initial.njk', {
-      plans: plans.result.items.map(d => {
-        d.nameShort = d.name.replace(/tillwhen/i, '').trim()
-        return d
-      }),
-    })
-  )
-})
+    return inlineCSS(
+      await reply.viewAsync('billing-initial.njk', {
+        plans: plans.result.items.map((d: any) => {
+          d.nameShort = d.name.replace(/tillwhen/i, '').trim()
+          return d
+        }),
+      })
+    )
+  }
+)
 
-app.get('/signout', (req, reply) => {
+app.get('/signout', (req: any, reply: any) => {
   reply.clearCookie('token')
   reply.redirect('/login')
 })
@@ -262,7 +276,7 @@ app.get('/signout', (req, reply) => {
 app.get(
   '/billing/success',
   { preHandler: allowLoggedIn },
-  async (req, reply) => {
+  async (req: any, reply: any) => {
     const checkoutId = req.query.checkoutId
     const customerId = await billing.getCustomerId(checkoutId)
     const planId = await billing.getPlanId(checkoutId)
@@ -270,17 +284,10 @@ app.get(
 
     await prisma.billing.updateMany({
       where: {
-        userId: user.id,
+        customerId: customerId,
       },
-      data: {
-        isActive: false,
-      },
-    })
-
-    await prisma.billing.create({
       data: {
         planId,
-        externalId: customerId,
         userId: user.id,
         isActive: true,
       },
@@ -291,11 +298,12 @@ app.get(
 
 app.get(
   '/billing/checkout',
-  Checkout({
-    accessToken: config.BILLING_API_KEY,
-    successUrl: config.BILLING_SUCCESS_URL,
-    server: isDev ? 'sandbox' : 'production',
-  })
+  { preHandler: allowLoggedIn },
+  async (req, reply) => {
+    const user = req.user!
+    const checkout = await billing.createCheckout(user.id)
+    reply.redirect(checkout.url)
+  }
 )
 
 app.get(
@@ -308,10 +316,11 @@ app.get(
     async getCustomerId(event) {
       const userBilling = await prisma.billing.findFirst({
         where: {
+          // @ts-expect-error TS(2339): Property 'user' does not exist on type 'FastifyReq... Remove this comment to see the full error message
           userId: event.user.id,
         },
       })
-      return userBilling.externalId
+      return userBilling?.customerId!
     },
     server: isDev ? 'sandbox' : 'production',
   })
@@ -319,14 +328,4 @@ app.get(
 
 app.register(authRoutes)
 
-await app.listen({ port: PORT })
-
-const beasties = new Beasties({
-  path: './src/public',
-  publicPath: '/public/',
-})
-
-async function inlineCSS(html) {
-  const inlined = await beasties.process(html)
-  return inlined
-}
+app.listen({ port: PORT })

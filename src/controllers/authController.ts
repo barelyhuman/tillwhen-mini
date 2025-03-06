@@ -1,9 +1,10 @@
-import { generateToken } from '../lib/access-token.js'
-import prisma from '../models/prismaClient.js'
+import { generateToken } from '../lib/access-token.ts'
+import prisma from '../models/prismaClient.ts'
 import bcrypt from 'bcryptjs'
-import { billing } from './billingController.js'
+import { billing } from './billingController.ts'
+import { isDev } from '../lib/is-dev.ts'
 
-export const signup = async (req, reply) => {
+export const signup = async (req: any, reply: any) => {
   const { email, password, name, bio } = req.body
 
   const hashedPassword = await bcrypt.hash(password, 10)
@@ -24,7 +25,7 @@ export const signup = async (req, reply) => {
   reply.redirect('/login')
 }
 
-export const login = async (req, reply) => {
+export const login = async (req: any, reply: any) => {
   const { email, password } = req.body
 
   const user = await prisma.user.findUnique({
@@ -58,7 +59,7 @@ export const login = async (req, reply) => {
 
   reply.setCookie('token', token, {
     path: '/',
-    secure: process.env.NODE_ENV !== 'development',
+    secure: !isDev,
     httpOnly: true,
     sameSite: 'lax',
   })

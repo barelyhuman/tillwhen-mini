@@ -1,7 +1,7 @@
 import { verifyToken } from '../lib/access-token.js'
 import prisma from '../models/prismaClient.js'
 
-export const isLoggedIn = async req => {
+export const isLoggedIn = async (req: any) => {
   const token = req.cookies.token || req.headers.authorization?.split(' ')[1]
   if (!token) return false
 
@@ -17,10 +17,10 @@ export const isLoggedIn = async req => {
   return true
 }
 
-export const allowLoggedIn = async (req, reply) => {
+export const allowLoggedIn = async (req: any, reply: any) => {
   if (req.url === '/login') return
 
-  const loggedIn = await isLoggedIn(req, reply)
+  const loggedIn = await isLoggedIn(req)
   if (!loggedIn) {
     const redirectUrl = encodeURIComponent(req.url)
     reply.redirect(`/login?redir_to=${redirectUrl}`)

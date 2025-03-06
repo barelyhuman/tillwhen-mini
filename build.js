@@ -2,7 +2,7 @@
 import { soul } from './soul.js'
 
 await soul({
-  entries: ['./src/server.js'],
+  entries: ['./src/server.ts'],
   assets: [
     {
       src: './src/views',

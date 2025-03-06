@@ -1,0 +1,12 @@
+services:
+  tillwhen:
+    image: barelyhuman/tillwhen
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file:
+      - .env
+    ports:
+      - '3003:3000'
+    volumes:
+      - ./data:/data
