@@ -51,7 +51,7 @@ app.register(import('@fastify/view'), {
   engine: {
     nunjucks: nunjucks,
   },
-  templates: './src/views',
+  templates: join(__dirname, './views'),
 })
 
 app.decorateRequest('isLoggedIn', function (this: any) {
