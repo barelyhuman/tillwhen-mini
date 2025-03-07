@@ -9,6 +9,7 @@
         </div>
         <div class="card-body p-6 pt-0">
           <form action="/login" method="post">
+          <input type="hidden" name="_csrf" value="{{csrfToken}}">
             <div class="flex flex-col gap-6">
               <div class="grid gap-2">
                 <label htmlFor="email">Email</label>

@@ -28,6 +28,7 @@ errorMessages%}
     <div class="mt-10">
       <h3>Update Email</h3>
       <form action="/account/email" method="post" class="py-6">
+      <input type="hidden" name="_csrf" value="{{csrfToken}}">
         <div class="flex flex-col gap-6">
           <div class="grid gap-2">
             <label for="email">Email</label>

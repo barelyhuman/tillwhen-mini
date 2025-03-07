@@ -1,6 +1,7 @@
 import { CustomerPortal } from '@polar-sh/fastify'
 import bcrypt from 'bcryptjs'
-import { fastifySecureSession } from '@fastify/secure-session'
+
+import helmet from '@fastify/helmet'
 import v8 from 'node:v8'
 import Fastify, { FastifyReply } from 'fastify'
 import { readFileSync } from 'node:fs'
@@ -28,13 +29,12 @@ app.decorate('db', prisma)
 app.register(import('@fastify/cookie'))
 app.register(import('@fastify/formbody'))
 
-app.register(import('@fastify/helmet'), {
+await app.register(helmet, {
   strictTransportSecurity: false,
   contentSecurityPolicy:
     process.env.NODE_ENV !== 'production'
       ? false
       : {
-          defaultSrc: ["'self'"],
           directives: {
             'script-src': ["'self'"],
           },
@@ -104,27 +104,29 @@ app.decorateRequest('isLoggedIn', function (this: any) {
 
 const PORT = config.PORT
 
-app.get('/', (req: any, reply: any) => {
+app.get('/', (req, reply) => {
   return reply.viewAsync('index.njk')
 })
 
-app.get('/login', async (req: any, reply: any) => {
+app.get('/login', async (req, reply) => {
   if (await req.isLoggedIn()) {
     return reply.redirect('/app')
   }
   return reply.viewAsync('login.njk', {
     flash: reply.flash(),
+    csrfToken: reply.generateCsrf(),
   })
 })
 
-app.get('/signup', (req: any, reply: any) => {
+app.get('/signup', (req, reply) => {
   return reply.viewAsync('signup.njk', {
     flash: reply.flash(),
+    csrfToken: reply.generateCsrf(),
   })
 })
 
-app.get('/app', { preHandler: allowLoggedIn }, async (r: any, reply: any) => {
-  const currentUser = r.user
+app.get('/app', { preHandler: allowLoggedIn }, async (r, reply) => {
+  const currentUser = r.user!
   const logs = (
     await prisma.timeLog.findMany({
       where: {
@@ -137,6 +139,7 @@ app.get('/app', { preHandler: allowLoggedIn }, async (r: any, reply: any) => {
   })
   return reply.viewAsync('app.njk', {
     flash: reply.flash(),
+    csrfToken: reply.generateCsrf(),
     logs,
   })
 })
@@ -203,53 +206,48 @@ const validateDateTime = z
     }
   )
 
-app.post(
-  '/app',
-  { preHandler: allowLoggedIn },
-  async (req: any, reply: any) => {
-    try {
-      const validate = validateDateTime.safeParse(req.body)
+app.post('/app', { preHandler: allowLoggedIn }, async (req, reply) => {
+  try {
+    const currentUser = req.user!
+    const validate = validateDateTime.safeParse(req.body)
 
-      if (!validate.success) {
-        req.flash('error', zodToErrors(validate.error))
-        return reply.redirect('/app')
-      }
-
-      const { fromDateTime, logTitle, toDateTime } = validate.data
-
-      const currentUser = req.user
-
-      const diff = toDateTime.getTime() - fromDateTime.getTime()
-
-      await prisma.timeLog.create({
-        data: {
-          title: logTitle,
-          date: fromDateTime,
-          duration: diff,
-          user: {
-            connect: {
-              id: currentUser.id,
-            },
-          },
-        },
-      })
-
-      req.flash('success', 'Time Log Created!')
-      return reply.redirect('/app')
-    } catch (err) {
-      req.flash('error', 'Oops! Something went wrong')
+    if (!validate.success) {
+      req.flash('error', zodToErrors(validate.error))
       return reply.redirect('/app')
     }
+
+    const { fromDateTime, logTitle, toDateTime } = validate.data
+
+    const diff = toDateTime.getTime() - fromDateTime.getTime()
+
+    await prisma.timeLog.create({
+      data: {
+        title: logTitle,
+        date: fromDateTime,
+        duration: diff,
+        user: {
+          connect: {
+            id: currentUser.id,
+          },
+        },
+      },
+    })
+
+    req.flash('success', 'Time Log Created!')
+    return reply.redirect('/app')
+  } catch (err) {
+    req.flash('error', 'Oops! Something went wrong')
+    return reply.redirect('/app')
   }
-)
+})
 
 app.post(
   '/account/password',
   { preHandler: allowLoggedIn },
   async (req: any, reply: any) => {
     try {
+      const currentUser = req.user!
       const { currentPassword, newPassword, confirmPassword } = req.body
-      const currentUser = req.user
 
       if (!(await bcrypt.compare(currentPassword, currentUser.password))) {
         req.flash('error', 'Invalid password')
@@ -281,13 +279,24 @@ app.post(
   }
 )
 
+const emailUpdateSchema = z.object({
+  email: z.string().email().nonempty(),
+})
+
 app.post(
   '/account/email',
   { preHandler: allowLoggedIn },
-  async (req: any, reply: any) => {
+  async (req, reply) => {
     try {
-      const { email } = req.body
-      const currentUser = req.user
+      const currentUser = req.user!
+
+      const validated = emailUpdateSchema.safeParse(req.body)
+      if (!validated.success) {
+        req.flash('error', zodToErrors(validated.error))
+        return reply.redirect('/account')
+      }
+
+      const { email } = validated.data
 
       await prisma.user.update({
         data: {
@@ -308,18 +317,15 @@ app.post(
   }
 )
 
-app.get(
-  '/account',
-  { preHandler: allowLoggedIn },
-  async (r: any, reply: any) => {
-    const user = r.user
+app.get('/account', { preHandler: allowLoggedIn }, async (r, reply) => {
+  const user = r.user!
 
-    return reply.viewAsync('account.njk', {
-      email: user.email,
-      flash: readFlash(reply),
-    })
-  }
-)
+  return reply.viewAsync('account.njk', {
+    email: user.email,
+    flash: readFlash(reply),
+    csrfToken: reply.generateCsrf(),
+  })
+})
 
 app.get(
   '/billing',
