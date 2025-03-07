@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>{% block title %}Tillwhen{% endblock %}</title>
+    <title>{% block title %}Tillwhen (pre-alpha){% endblock %}</title>
     <link rel="stylesheet" href="/public/tailwind.css" />
     <link rel="stylesheet" href="/public/unpoly.min.css" />
     <script src="/public/unpoly.min.js"></script>
@@ -15,7 +15,50 @@
   </head>
   <body>
     <main>
-      {% block content %}
+      {% if flash.error.length %} {%for msg in flash.error%}
+      <div class="toast toast-top toast-end">
+        <div role="alert" class="alert alert-error">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            class="h-6 w-6 shrink-0 stroke-current"
+            fill="none"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
+            />
+          </svg>
+          <span>{{msg}}</span>
+        </div>
+      </div>
+      {%endfor%} {%endif %} {% if flash.success.length %}
+
+      <div class="toast toast-top toast-end">
+        {%for msg in flash.success%}
+
+        <div role="alert" class="alert alert-success">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            class="h-6 w-6 shrink-0 stroke-current"
+            fill="none"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+            />
+          </svg>
+          <span>{{msg}}</span>
+        </div>
+
+        {%endfor%}
+      </div>
+      {%endif %} {% block content %}
       <!-- Main content goes here -->
       {% endblock %}
     </main>

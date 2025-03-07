@@ -6,7 +6,9 @@ export function constructDateFromSplits(date: string, time: string) {
       return baseDate
     }
     const [hours, minutes, seconds] = splits
-    baseDate.setHours(Number(hours), Number(minutes), Number(seconds))
+    if (hours) baseDate.setHours(Number(hours))
+    if (minutes) baseDate.setMinutes(Number(minutes))
+    if (seconds) baseDate.setSeconds(Number(seconds))
   }
   return baseDate
 }

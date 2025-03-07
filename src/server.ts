@@ -1,11 +1,14 @@
-import Fastify from 'fastify'
-import nunjucks from 'nunjucks'
-
 import { CustomerPortal } from '@polar-sh/fastify'
 import bcrypt from 'bcryptjs'
+import { fastifySecureSession } from '@fastify/secure-session'
+import v8 from 'node:v8'
+import Fastify, { FastifyReply } from 'fastify'
 import { readFileSync } from 'node:fs'
+import underPressure from '@fastify/under-pressure'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import nunjucks from 'nunjucks'
+import { z } from 'zod'
 import config from './config.ts'
 import { billing } from './controllers/billingController.ts'
 import { constructDateFromSplits } from './lib/date.ts'
@@ -15,6 +18,7 @@ import { prettyMs } from './lib/pretty-ms.ts'
 import { allowLoggedIn, isLoggedIn } from './middlewares/authMiddleware.ts'
 import prisma from './models/prismaClient.ts'
 import authRoutes from './routes/authRoutes.ts'
+import { zodToErrors } from './lib/zodToErrors.ts'
 
 const app = Fastify({ logger: true })
 const __dirname = dirname(fileURLToPath(import.meta.url))
@@ -23,6 +27,39 @@ app.decorate('db', prisma)
 
 app.register(import('@fastify/cookie'))
 app.register(import('@fastify/formbody'))
+
+app.register(import('@fastify/helmet'), {
+  strictTransportSecurity: false,
+  contentSecurityPolicy:
+    process.env.NODE_ENV !== 'production'
+      ? false
+      : {
+          defaultSrc: ["'self'"],
+          directives: {
+            'script-src': ["'self'"],
+          },
+        },
+})
+
+app.register(import('@fastify/rate-limit'), {
+  max: 1000,
+  timeWindow: '1 minute',
+})
+
+app.register(underPressure, {
+  maxEventLoopDelay: 1000,
+  maxHeapUsedBytes: v8.getHeapStatistics().heap_size_limit,
+  maxRssBytes: v8.getHeapStatistics().total_available_size,
+  pressureHandler: (req, rep, type, value) => {
+    if (type === underPressure.TYPE_HEAP_USED_BYTES) {
+      app.log.warn(`too many heap bytes used: ${value}`)
+    } else if (type === underPressure.TYPE_RSS_BYTES) {
+      app.log.warn(`too many rss bytes used: ${value}`)
+    }
+
+    rep.send('Under Pressure, please try again in a bit')
+  },
+})
 
 nunjucks.configure('views', {
   autoescape: true,
@@ -38,13 +75,21 @@ app.register(import('@fastify/static'), {
 
 app.register(import('@fastify/secure-session'), {
   key: readFileSync(join(__dirname, '../keys', 'secret-key')),
+  cookie: {
+    secure: !isDev,
+    sameSite: 'lax',
+    httpOnly: true,
+    path: '/',
+    maxAge: 60 * 60 * 24 * 30,
+  },
+  cookieName: 'session',
 })
 
-// @ts-expect-error overload for flash types missing
-app.register(import('@fastify/flash'), {
-  root: join(__dirname, './public'),
-  prefix: '/public/',
+app.register(import('@fastify/csrf-protection'), {
+  sessionPlugin: '@fastify/secure-session',
 })
+
+app.register(import('@fastify/flash'))
 
 app.register(import('@fastify/view'), {
   engine: {
@@ -67,11 +112,15 @@ app.get('/login', async (req: any, reply: any) => {
   if (await req.isLoggedIn()) {
     return reply.redirect('/app')
   }
-  return reply.viewAsync('login.njk')
+  return reply.viewAsync('login.njk', {
+    flash: reply.flash(),
+  })
 })
 
 app.get('/signup', (req: any, reply: any) => {
-  return reply.viewAsync('signup.njk')
+  return reply.viewAsync('signup.njk', {
+    flash: reply.flash(),
+  })
 })
 
 app.get('/app', { preHandler: allowLoggedIn }, async (r: any, reply: any) => {
@@ -87,40 +136,110 @@ app.get('/app', { preHandler: allowLoggedIn }, async (r: any, reply: any) => {
     return d
   })
   return reply.viewAsync('app.njk', {
-    successMessages: reply.flash('success'),
+    flash: reply.flash(),
     logs,
   })
 })
 
-// TODO: validate input types and string stamps for the form
+function readFlash(reply: FastifyReply) {
+  const messages = reply.flash()
+  Object.keys(messages).forEach(k => {
+    reply.flash(k)
+  })
+  return messages
+}
+
+const validateDateTime = z
+  .object({
+    logTitle: z.string().nonempty(),
+    fromDate: z.string().date().nonempty(),
+    fromTime: z.string().optional().default('00:00'),
+    toDate: z.string().date().nonempty(),
+    toTime: z.string().optional().default('00:00'),
+  })
+  .transform(({ fromDate, fromTime, toDate, toTime, logTitle }) => {
+    const fromDateTime = constructDateFromSplits(fromDate, fromTime)
+    const toDateTime = constructDateFromSplits(toDate, toTime)
+    return {
+      logTitle,
+      fromDateTime,
+      toDateTime,
+    }
+  })
+  .refine(
+    ({ toDateTime }) => {
+      if (toDateTime.getTime() > Date.now()) {
+        return false
+      }
+      return true
+    },
+    {
+      message: "To Date can't be in the future",
+      path: ['toDate'],
+    }
+  )
+  .refine(
+    ({ fromDateTime }) => {
+      if (fromDateTime.getTime() > Date.now()) {
+        return false
+      }
+      return true
+    },
+    {
+      message: "From Date can't be in the future",
+      path: ['fromDate'],
+    }
+  )
+  .refine(
+    ({ fromDateTime, toDateTime }) => {
+      if (fromDateTime.getTime() > toDateTime.getTime()) {
+        return false
+      }
+      return true
+    },
+    {
+      message: 'From Date must be before To Date',
+      path: ['fromDate', 'toDate'],
+    }
+  )
+
 app.post(
   '/app',
   { preHandler: allowLoggedIn },
   async (req: any, reply: any) => {
-    const { fromDate, fromTime, logTitle, toDate, toTime } = req.body
+    try {
+      const validate = validateDateTime.safeParse(req.body)
 
-    const currentUser = req.user
-    const fromDateTime = constructDateFromSplits(fromDate, fromTime)
-    const toDateTime = constructDateFromSplits(toDate, toTime)
+      if (!validate.success) {
+        req.flash('error', zodToErrors(validate.error))
+        return reply.redirect('/app')
+      }
 
-    const diff = toDateTime.getTime() - fromDateTime.getTime()
+      const { fromDateTime, logTitle, toDateTime } = validate.data
 
-    await prisma.timeLog.create({
-      data: {
-        title: logTitle,
-        date: fromDateTime,
-        duration: diff,
-        user: {
-          connect: {
-            id: currentUser.id,
+      const currentUser = req.user
+
+      const diff = toDateTime.getTime() - fromDateTime.getTime()
+
+      await prisma.timeLog.create({
+        data: {
+          title: logTitle,
+          date: fromDateTime,
+          duration: diff,
+          user: {
+            connect: {
+              id: currentUser.id,
+            },
           },
         },
-      },
-    })
+      })
 
-    req.flash('success', 'Time Log Created!')
-
-    return reply.redirect('/app')
+      req.flash('success', 'Time Log Created!')
+      return reply.redirect('/app')
+    } catch (err) {
+      req.flash('error', 'Oops! Something went wrong')
+      return reply.redirect('/app')
+    }
   }
 )
 
@@ -128,30 +247,37 @@ app.post(
   '/account/password',
   { preHandler: allowLoggedIn },
   async (req: any, reply: any) => {
-    const { currentPassword, newPassword, confirmPassword } = req.body
-    const currentUser = req.user
+    try {
+      const { currentPassword, newPassword, confirmPassword } = req.body
+      const currentUser = req.user
 
-    if (!(await bcrypt.compare(currentPassword, currentUser.password))) {
-      req.flash('error', 'Invalid password')
+      if (!(await bcrypt.compare(currentPassword, currentUser.password))) {
+        req.flash('error', 'Invalid password')
+        return reply.redirect('/account')
+      }
+
+      if (newPassword !== confirmPassword) {
+        req.flash('error', 'Invalid password')
+        return reply.redirect('/account')
+      }
+
+      const hashedPassword = await bcrypt.hash(confirmPassword, 10)
+      await prisma.user.update({
+        data: {
+          password: hashedPassword,
+        },
+        where: {
+          id: currentUser.id,
+        },
+      })
+
+      req.flash('success', 'Updated Password')
+      return reply.redirect('/account')
+    } catch (err) {
+      app.log.error({ err }, 'Failed ot update password')
+      req.flash('error', 'Oops! Something went wrong')
       return reply.redirect('/account')
     }
-
-    if (newPassword === confirmPassword) {
-      req.flash('error', 'Invalid password')
-      return reply.redirect('/account')
-    }
-
-    const hashedPassword = await bcrypt.hash(confirmPassword, 10)
-    await prisma.user.update({
-      data: {
-        password: hashedPassword,
-      },
-      where: {
-        id: currentUser.id,
-      },
-    })
-
-    return reply.redirect('/account')
   }
 )
 
@@ -159,34 +285,41 @@ app.post(
   '/account/email',
   { preHandler: allowLoggedIn },
   async (req: any, reply: any) => {
-    const { email } = req.body
-    const currentUser = req.user
+    try {
+      const { email } = req.body
+      const currentUser = req.user
 
-    await prisma.user.update({
-      data: {
-        email: email,
-      },
-      where: {
-        id: currentUser.id,
-      },
-    })
+      await prisma.user.update({
+        data: {
+          email: email,
+        },
+        where: {
+          id: currentUser.id,
+        },
+      })
 
-    return reply.redirect('/account')
+      req.flash('success', 'Updated Email')
+      return reply.redirect('/account')
+    } catch (err) {
+      app.log.error({ err }, 'Failed ot update email')
+      req.flash('error', 'Oops! Something went wrong')
+      return reply.redirect('/account')
+    }
   }
 )
 
-// app.get('/projects', { preHandler: allowLoggedIn }, (req: any, reply: any) => {
-//   return reply.viewAsync('projects.njk', {})
-// })
+app.get(
+  '/account',
+  { preHandler: allowLoggedIn },
+  async (r: any, reply: any) => {
+    const user = r.user
 
-app.get('/account', { preHandler: allowLoggedIn }, (r: any, reply: any) => {
-  const user = r.user
-  const messages = reply.flash('error')
-  return reply.viewAsync('account.njk', {
-    email: user.email,
-    errorMessages: messages,
-  })
-})
+    return reply.viewAsync('account.njk', {
+      email: user.email,
+      flash: readFlash(reply),
+    })
+  }
+)
 
 app.get(
   '/billing',
